@@ -3,9 +3,12 @@
 <html>
 
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MapRest</title>
   <style>
     .cella {padding: 5px; border: 1px solid red; margin: 5px}
+    .cella:hover {background-color: #f0f0f0; cursor: pointer;}
   </style>
 </head>
 
@@ -16,21 +19,29 @@
 </body>
 
 <script>
-  var ROWS=32;
-  var COLS=32;
-  var tbl;
+  const ROWS=32, COLS=32;
+  let myAvatar="X", bombAvatar="O", myrow=ROWS/2, mycol=COLS/2;
+  let tbl;
+  let mapData = []; // Dati degli avatar: {row / col / valore}
+
   makeMap("mapcontent", ROWS, COLS);
   placeAvatar( 10, 20, "SG" );
   placeAvatar( 20, 20, "SG" );
   placeAvatar( 20, 20, "SG" );
 
-  function makeMap( placeholder, rows, cols ) {
+/**
+ * Crea la mappa iniziale vuota
+ */
+ function makeMap( placeholder, rows, cols ) {
     tbl = document.createElement("table");
     for (let i=0; i<rows; i++) {
       let tr = document.createElement("tr");
       for (let j=0; j<cols; j++) {
         let td = document.createElement("td");
         td.setAttribute("class", "cella");
+        td.setAttribute("row", i);
+        td.setAttribute("col", j);
+        td.addEventListener('click', () => clickCell(i, j, td));
         tr.appendChild(td);
       }
       tbl.appendChild(tr);
@@ -39,13 +50,60 @@
     d.appendChild(tbl);
   }
 
-  function placeAvatar( row, col, val ) {
+/**
+ * Imposta un Avatar nella posizione specificata
+ */
+ function placeAvatar( row, col, val ) {
     let cell = tbl.rows[row].cells[col];
     if (cell.hasChildNodes()) {
       cell.removeChild(cell.firstChild);
     }
     tbl.rows[row].cells[col].appendChild( document.createTextNode(val) );
   }
+
+  function clickCell(row, col, cell) {
+    if (cell.hasChildNodes()) {
+      alert("Cella "+row+"-"+col+" occupata!");
+    } else {
+      cell.appendChild( document.createTextNode(bombAvatar) );
+    }
+  }
+
+/**
+ * Recupera i dati degli avatar dal server
+ */
+ function fetchData() {
+    fetch('api.php')
+        .then(response => response.json())
+        .then(data => {
+            mapData = data;
+            renderAvatars();
+        })
+        .catch(error => {
+            console.error('Errore durante il recupero dei dati:', error);
+            updateStatus('Errore durante il recupero dei dati');
+        });
+}
+
+/**
+ * Renderizza gli avatar sulla mappa in base ai dati
+ */
+function render() {
+    // Prima pulisci tutte le celle
+    for (let i = 0; i < ROWS; i++) {
+        for (let j = 0; j < COLS; j++) {
+            let cell = tbl.rows[i].cells[j];
+            cell.innerHTML = '';
+            cell.classList.remove('has-avatar');
+        }
+    }
+    
+    // Poi posiziona gli avatar
+    for (const key in avatarData) {
+        const [row, col] = key.split('_').map(Number);
+        placeAvatar(row, col, avatarData[key]);
+    }
+}
 
 </script>
 
